@@ -1,0 +1,12 @@
+# Fichiers et dossiers générés par Composer
+/vendor/
+
+# Fichiers de configuration spécifiques à votre IDE
+*.sublime-project
+*.sublime-workspace
+.idea/
+.vscode/
+
+# Fichiers temporaires ou systèmes
+Thumbs.db
+.DS_Store

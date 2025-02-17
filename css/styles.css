@@ -1,0 +1,17 @@
+body {
+    padding-top: 70px;
+  }
+  
+  .navbar-brand {
+    font-weight: bold;
+  }
+  
+  .container h1, .container h2 {
+    margin-bottom: 20px;
+  }
+  
+  .card-img-top {
+    height: 200px;
+    object-fit: cover;
+  }
+  
