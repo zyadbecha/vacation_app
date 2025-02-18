@@ -39,5 +39,19 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 function reserveOffer(offerId) {
-    alert("Réserver l'offre avec l'ID : " + offerId);
+    const userId = localStorage.getItem("userId"); // Récupérer l'ID utilisateur depuis le stockage local
+
+    if (!userId) {
+        alert("Vous devez être connecté pour réserver.");
+        return;
+    }
+
+    fetch("api/reservation.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ offerId, userId })
+    })
+    .then(response => response.json())
+    .then(data => alert(data.message))
+    .catch(error => console.error("Erreur :", error));
 }
