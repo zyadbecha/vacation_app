@@ -1,23 +1,28 @@
 <?php
-require '../config/database.php';
+require '../vendor/autoload.php';
 
-header('Content-Type: application/json');
+// Connexion à MongoDB
+$mongoClient = new MongoDB\Client("mongodb://localhost:27017");
+$database = $mongoClient->reservation_app;
+$offersCollection = $database->offers;
 
+// Vérification du paramètre de recherche
 $query = isset($_GET['query']) ? $_GET['query'] : "";
 
+// Construction de la requête de recherche
 $filter = [];
 if (!empty($query)) {
-    $filter = ['$text' => ['$search' => $query]];
+    $filter = [
+        '$or' => [
+            ['name' => new MongoDB\BSON\Regex($query, 'i')],
+            ['description' => new MongoDB\BSON\Regex($query, 'i')]
+        ]
+    ];
 }
 
-$collection = $db->offers;
-$offers = $collection->find($filter);
+// Récupération des offres
+$offers = $offersCollection->find($filter)->toArray();
 
-$result = [];
-foreach ($offers as $offer) {
-    $offer['_id'] = (string) $offer['_id']; 
-    $result[] = $offer;
-}
-
-echo json_encode($result);
+// Conversion en format JSON
+echo json_encode($offers);
 ?>
