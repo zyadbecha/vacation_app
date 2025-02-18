@@ -1,30 +1,36 @@
 <?php
-header("Content-Type: application/json");
-session_start();
-require 'config.php';
+require '../vendor/autoload.php';
 
-// Vérifier que l'utilisateur est connecté
-if(!isset($_SESSION["user_id"])) {
-    echo json_encode(["message" => "Non autorisé."]);
-    exit;
+// Connexion à MongoDB
+$mongoClient = new MongoDB\Client("mongodb://localhost:27017");
+$database = $mongoClient->reservation_app;
+$reservationsCollection = $database->reservations;
+
+// Vérifier si la requête est en POST
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    // Récupérer les données JSON envoyées
+    $data = json_decode(file_get_contents("php://input"), true);
+
+    if (isset($data['offerId']) && isset($data['userId'])) {
+        $newReservation = [
+            'userId' => $data['userId'],
+            'offerId' => new MongoDB\BSON\ObjectId($data['offerId']),
+            'status' => 'en attente',
+            'date' => new MongoDB\BSON\UTCDateTime()
+        ];
+
+        // Insérer la réservation dans MongoDB
+        $result = $reservationsCollection->insertOne($newReservation);
+
+        if ($result->getInsertedCount() > 0) {
+            echo json_encode(["success" => true, "message" => "Réservation effectuée"]);
+        } else {
+            echo json_encode(["success" => false, "message" => "Erreur lors de la réservation"]);
+        }
+    } else {
+        echo json_encode(["success" => false, "message" => "Données incomplètes"]);
+    }
+} else {
+    echo json_encode(["success" => false, "message" => "Méthode non autorisée"]);
 }
-
-$data = json_decode(file_get_contents("php://input"), true);
-if(!isset($data["offer_id"])) {
-    echo json_encode(["message" => "Données manquantes."]);
-    exit;
-}
-
-// Création de la réservation dans la collection 'reservations'
-$result = $db->reservations->insertOne([
-    "user_id" => new MongoDB\BSON\ObjectId($_SESSION["user_id"]),
-    "offer_id" => new MongoDB\BSON\ObjectId($data["offer_id"]),
-    "date" => new MongoDB\BSON\UTCDateTime(),
-    "status" => "confirmé"
-]);
-
-echo json_encode([
-    "message" => "Réservation réussie.",
-    "reservation_id" => (string)$result->getInsertedId()
-]);
 ?>
