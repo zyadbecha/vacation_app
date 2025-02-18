@@ -1,35 +1,36 @@
 <?php
-header("Content-Type: application/json");
-require 'config.php';
+require '../vendor/autoload.php';
 
-// Récupération des données JSON envoyées
-$data = json_decode(file_get_contents("php://input"), true);
+// Connexion à MongoDB
+$mongoClient = new MongoDB\Client("mongodb://localhost:27017");
+$database = $mongoClient->reservation_app;
+$usersCollection = $database->users;
 
-if(!isset($data["name"], $data["email"], $data["password"])) {
-    echo json_encode(["message" => "Données manquantes."]);
-    exit;
+// Vérifier si la requête est en POST
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    $data = json_decode(file_get_contents("php://input"), true);
+
+    if (isset($data['name']) && isset($data['email']) && isset($data['password'])) {
+        $hashedPassword = password_hash($data['password'], PASSWORD_BCRYPT);
+        $newUser = [
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'password' => $hashedPassword,
+            'role' => 'client'
+        ];
+
+        // Insérer dans la collection users
+        $result = $usersCollection->insertOne($newUser);
+
+        if ($result->getInsertedCount() > 0) {
+            echo json_encode(["success" => true, "message" => "Inscription réussie"]);
+        } else {
+            echo json_encode(["success" => false, "message" => "Erreur lors de l'inscription"]);
+        }
+    } else {
+        echo json_encode(["success" => false, "message" => "Données incomplètes"]);
+    }
+} else {
+    echo json_encode(["success" => false, "message" => "Méthode non autorisée"]);
 }
-
-// Vérifier si l'utilisateur existe déjà
-$existingUser = $db->users->findOne(["email" => $data["email"]]);
-if($existingUser) {
-    echo json_encode(["message" => "Cet email est déjà utilisé."]);
-    exit;
-}
-
-// Hashage du mot de passe
-$passwordHash = password_hash($data["password"], PASSWORD_BCRYPT);
-
-// Insertion du nouvel utilisateur dans la collection
-$result = $db->users->insertOne([
-    "name" => $data["name"],
-    "email" => $data["email"],
-    "password" => $passwordHash,
-    "role" => "client"
-]);
-
-echo json_encode([
-    "message" => "Inscription réussie.",
-    "insertedId" => (string)$result->getInsertedId()
-]);
 ?>
