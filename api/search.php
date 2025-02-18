@@ -1,19 +1,23 @@
 <?php
-header("Content-Type: application/json");
-require 'config.php';
+require '../config/database.php';
 
-// Récupération de la chaîne de recherche passée en GET
+header('Content-Type: application/json');
+
 $query = isset($_GET['query']) ? $_GET['query'] : "";
 
-// Utilisation d'une expression régulière pour une recherche insensible à la casse
-$regex = new MongoDB\BSON\Regex($query, "i");
-$offersCursor = $db->offers->find(["name" => $regex]);
-
-$offers = [];
-foreach ($offersCursor as $offer) {
-    // Conversion de l'ObjectId en string pour faciliter l'utilisation en front-end
-    $offer["_id"] = (string)$offer["_id"];
-    $offers[] = $offer;
+$filter = [];
+if (!empty($query)) {
+    $filter = ['$text' => ['$search' => $query]];
 }
-echo json_encode($offers);
+
+$collection = $db->offers;
+$offers = $collection->find($filter);
+
+$result = [];
+foreach ($offers as $offer) {
+    $offer['_id'] = (string) $offer['_id']; 
+    $result[] = $offer;
+}
+
+echo json_encode($result);
 ?>
