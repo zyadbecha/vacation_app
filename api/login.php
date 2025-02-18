@@ -1,29 +1,36 @@
 <?php
-header("Content-Type: application/json");
-session_start();
-require 'config.php';
+require '../vendor/autoload.php';
 
-// Récupération des données JSON envoyées
-$data = json_decode(file_get_contents("php://input"), true);
-if(!isset($data["email"], $data["password"])) {
-    echo json_encode(["message" => "Données manquantes."]);
-    exit;
-}
+// Connexion à MongoDB
+$mongoClient = new MongoDB\Client("mongodb://localhost:27017");
+$database = $mongoClient->reservation_app;
+$usersCollection = $database->users;
 
-// Recherche de l'utilisateur par email
-$user = $db->users->findOne(["email" => $data["email"]]);
-if(!$user) {
-    echo json_encode(["message" => "Utilisateur non trouvé."]);
-    exit;
-}
+// Vérifier si la requête est en POST
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    $data = json_decode(file_get_contents("php://input"), true);
 
-// Vérification du mot de passe
-if(password_verify($data["password"], $user["password"])) {
-    // Mise en place d'une session (vous pourrez adapter pour un système de jeton JWT si besoin)
-    $_SESSION["user_id"] = (string)$user["_id"];
-    $_SESSION["role"] = $user["role"];
-    echo json_encode(["success" => true, "message" => "Connexion réussie."]);
+    if (isset($data['email']) && isset($data['password'])) {
+        $user = $usersCollection->findOne(['email' => $data['email']]);
+
+        if ($user && password_verify($data['password'], $user['password'])) {
+            echo json_encode([
+                "success" => true,
+                "message" => "Connexion réussie",
+                "user" => [
+                    "id" => (string)$user['_id'],
+                    "name" => $user['name'],
+                    "email" => $user['email'],
+                    "role" => $user['role']
+                ]
+            ]);
+        } else {
+            echo json_encode(["success" => false, "message" => "Identifiants incorrects"]);
+        }
+    } else {
+        echo json_encode(["success" => false, "message" => "Données incomplètes"]);
+    }
 } else {
-    echo json_encode(["message" => "Mot de passe incorrect."]);
+    echo json_encode(["success" => false, "message" => "Méthode non autorisée"]);
 }
 ?>
